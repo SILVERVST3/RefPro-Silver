@@ -1,0 +1,33 @@
+name: Build RefPro SILVER (VST3 / Windows)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar (CMake)
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Compilar (Release)
+        run: cmake --build build --config Release --target RefProSilver_VST3 --parallel
+
+      - name: Localizar o .vst3
+        shell: pwsh
+        run: |
+          $dir = Get-ChildItem -Path build -Recurse -Directory -Filter "*.vst3" | Select-Object -First 1
+          if (-not $dir) { throw "Nenhum .vst3 encontrado" }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Recurse -Force $dir.FullName dist/
+          Get-ChildItem -Recurse dist | Select-Object FullName
+
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: RefPro-SILVER-VST3-Windows
+          path: dist
